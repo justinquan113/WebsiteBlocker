@@ -42,7 +42,7 @@
             <div class="focus-item">
                 <h3>Focus Time</h3>
                 <div>
-                    <input id="focus-input" type="number" step="1" min="10" value="25">
+                    <input id="focus-input" type="number" step="1" min="1" value="25">
                     <p>Minutes</p>
                 </div>
             </div>
@@ -51,6 +51,14 @@
                 <div>
                     <input id="break-input" type="number" step="1" min="1" max="60" value="10">
                     <p>Minutes</p>
+                </div>
+            </div>
+
+            <div class="focus-item">
+                <h3>Num of Cycles</h3>
+                <div>
+                    <input id="cycles-input" type="number" step="1" min="1" max="5" value="1">
+                    <p>Cycles</p>
                 </div>
             </div>
                
@@ -65,7 +73,13 @@
             <div class="semicircle"></div>
             <div class="semicircle"></div>
             <div class="outermost-circle"></div>
+
+            <div class="clock-container">
+                <div class="clock"></div>
+            </div>
         </div>
+
+    
 
         <div class="timer-btns">
             <button id="reset-btn">Reset</button>

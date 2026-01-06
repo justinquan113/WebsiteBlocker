@@ -16,52 +16,115 @@ const focusPopup = document.getElementById('focus-popup')
 const startSession = document.getElementById('session-btn')
 const focusInput = document.getElementById('focus-input')
 const breakInput = document.getElementById('break-input')
+const cycleInput = document.getElementById('cycles-input')
 const timerPopup = document.getElementById('timer-popup')
 const pauseBtn = document.getElementById('pause-btn')
 const resetBtn = document.getElementById('reset-btn')
 const resumeBtn = document.getElementById('resume-btn')
 const semicircles = document.querySelectorAll('.semicircle')
-
-
-const hr = 0
-const min = 0
-const sec = 30
-
-const hours = hr * 3600000
-const minutes = min * 60000
-const seconds = sec * 1000
-const setTime = hours + minutes + seconds
-const startTime = Date.now()
-const futureTime = startTime + setTime
-const timerLoop = setInterval(countDownTimer)
+const clock = document.querySelector('.clock')
 
 
 
-function countDownTimer(){
+
+let focusBool = true
+let currentFocusVal = 0
+let currentBreakVal = 0
+let currentCycleVal = 0
+let timerLoop = null
+let blockedBack = []
+let remainingTimeGlobal = 0
+let currentSetTime = 0
+
+function countDownTimer(focusVal, breakVal, cycleVal, timeOverride = null){
+    currentBreakVal = breakVal
+    currentCycleVal = cycleVal
+    currentFocusVal = focusVal
+    if (currentCycleVal == 0){
+        return
+    }
+    
+    
+    let time = focusBool ? currentFocusVal : currentBreakVal
+
+    const timer = time * 1000
+    const setTime =  timeOverride ?? timer 
+    const startTime =  Date.now()
+    const futureTime = startTime + setTime
+
+    if(!timeOverride){
+        currentSetTime = timer
+    }
+
+    timerLoop = setInterval(() =>{
+        
+        const currentTime = Date.now()
+        const remainingTime = futureTime - currentTime
+        const angle = (remainingTime / currentSetTime) * 360
+        
+        remainingTimeGlobal = remainingTime
+
+        if(angle > 180){
+            semicircles[2].style.display = 'none'
+            semicircles[0].style.transform = 'rotate(180deg)'
+            semicircles[1].style.transform = `rotate(${angle}deg)`
+        }
+    
+        else{
+            semicircles[2].style.display = 'block'
+            semicircles[0].style.transform = `rotate(${angle}deg)`
+            semicircles[1].style.transform = `rotate(${angle}deg)`
+        }
+
+        const hrs = Math.floor((remainingTime / (1000 * 60 * 60)) % 24).toLocaleString('en-US', {minimumIntegerDigits: 2, useGrouping: false}) 
+        const mins = Math.floor((remainingTime / (1000 * 60)) % 60).toLocaleString('en-US', {minimumIntegerDigits: 2, useGrouping: false}) 
+        const secs = Math.floor((remainingTime / 1000) % 60).toLocaleString('en-US', {minimumIntegerDigits: 2, useGrouping: false})
     
 
-    const currentTime = Date.now()
-    const remainingTime = futureTime - currentTime
-    const angle = (remainingTime / setTime) * 360
+         clock.innerHTML = `
+            <div>${hrs}</div>
+            <div class='colon'>:</div>
+            <div>${mins}</div>
+            <div class='colon'>:</div>
+            <div>${secs}</div>
+        `
+        
+        if(remainingTime <= 0){
+           
+            clearInterval(timerLoop)
+            if(focusBool){
+                chrome.storage.local.get(['blockedWebsites']).then((result) =>{
+                    blockedBack = [...result.blockedWebsites]
+                    chrome.storage.local.set({blockedWebsites : []})
+                    console.log(blockedBack)
+                })
 
-    if(angle > 180){
-        semicircles[2].style.display = 'none'
-        semicircles[0].style.transform = 'rotate(180deg)'
-        semicircles[1].style.transform = `rotate(${angle}deg)`
-    }
+            }
 
-    else{
-        semicircles[2].style.display = 'block'
-        semicircles[0].style.transform = `rotate(${angle}deg)`
-        semicircles[1].style.transform = `rotate(${angle}deg)`
-    }
+            else{
+                chrome.storage.local.set({blockedWebsites : blockedBack})
+            }
+                    
+            if(!focusBool){
+                currentCycleVal--
+            }
+            focusBool = !focusBool
+            countDownTimer(currentFocusVal, currentBreakVal, currentCycleVal)
+            
 
-    if(remainingTime < 0){
-        clearInterval(timerLoop)
-
-    }
+            clock.innerHTML = `
+            <div>00</div>
+            <div class='colon'>:</div>
+            <div>00</div>
+            <div class='colon'>:</div>
+            <div>00</div>
+            `
+        }
+    })
+    
 
 }
+
 
 
 async function getCurrentTab() {
@@ -86,6 +149,8 @@ async function showDomain(){
             blockPopup.style.display = 'flex'
         }
     })
+
+   
     
 }
 
@@ -97,10 +162,9 @@ async function refreshCurrentTab() {
 }
 
 
-function handleClick(){
+function handleBlock(){
     chrome.storage.local.get(["blockedWebsites"]).then((result) => {
         const list = result.blockedWebsites || []
-        console.log(list)
         if (!list.includes(website_url)){
             list.push(website_url)
             chrome.storage.local.set({blockedWebsites: list})
@@ -211,9 +275,10 @@ function handleBack2(){
 function handleStartSession(){
     const focusVal = focusInput.value
     const breakVal = breakInput.value
+    const cycleVal = cycleInput.value
     timerPopup.style.display = 'flex'
     focusPopup.style.display = 'none'
-    
+    countDownTimer(focusVal, breakVal, cycleVal)
     
 }
 
@@ -224,25 +289,42 @@ function handlePauseResume(e){
     if(action == "Pause"){
         pauseBtn.style.display = 'none'
         resumeBtn.style.display = 'block'
-      
+        clearInterval(timerLoop)
     
-
     }
     else{
         pauseBtn.style.display = 'block'
         resumeBtn.style.display = 'none'
+        countDownTimer(currentFocusVal, currentBreakVal, currentCycleVal, remainingTimeGlobal)
+
     }
    
 }
 
 function handleReset(){
+    focusPopup.style.display = 'flex'
+    timerPopup.style.display = 'none'
+    pauseBtn.style.display = 'block'
+    resumeBtn.style.display = 'none'
+    currentBreakVal = 0
+    currentCycleVal = 0
+    currentFocusVal = 0
 
+    if (timerLoop) {
+        clearInterval(timerLoop);
+        timerLoop = null;
+    }
+
+    semicircles.forEach(s =>{
+        s.styled.display = 'none'
+        s.style.transform = 'rotate(0deg)'
+    })
 }
 
 document.addEventListener('DOMContentLoaded', showDomain);
 
 
-block.addEventListener('click', handleClick)
+block.addEventListener('click', handleBlock)
 editBlockList.addEventListener('click', handleEditBlockList)
 unblock.addEventListener('click', handleUnblock)
 refresh.addEventListener('click', refreshCurrentTab)
