@@ -36,6 +36,46 @@ let blockedBack = []
 let remainingTimeGlobal = 0
 let currentSetTime = 0
 
+function startDisplayUpdate(){
+    if(timerLoop){
+        clearInterval(timerLoop)
+    }
+    timerLoop = setInterval(() =>{
+        chrome.runtime.sendMessage({action: 'getTimerState'}, (response) =>{
+            const state = response.timerState
+            console.log(state.currentFocusVal)
+        })
+    },1000)
+}
+
+function displayTimer(remainingTime, setTime){
+    const angle = (remainingTime / setTime) * 360
+    if(angle > 180){
+            semicircles[2].style.display = 'none'
+            semicircles[0].style.transform = 'rotate(180deg)'
+            semicircles[1].style.transform = `rotate(${angle}deg)`
+        }
+    
+        else{
+            semicircles[2].style.display = 'block'
+            semicircles[0].style.transform = `rotate(${angle}deg)`
+            semicircles[1].style.transform = `rotate(${angle}deg)`
+        }
+
+        const hrs = Math.floor((remainingTime / (1000 * 60 * 60)) % 24).toLocaleString('en-US', {minimumIntegerDigits: 2, useGrouping: false}) 
+        const mins = Math.floor((remainingTime / (1000 * 60)) % 60).toLocaleString('en-US', {minimumIntegerDigits: 2, useGrouping: false}) 
+        const secs = Math.floor((remainingTime / 1000) % 60).toLocaleString('en-US', {minimumIntegerDigits: 2, useGrouping: false})
+    
+
+        clock.innerHTML = `
+            <div>${hrs}</div>
+            <div class='colon'>:</div>
+            <div>${mins}</div>
+            <div class='colon'>:</div>
+            <div>${secs}</div>
+        `
+}
+
 function countDownTimer(focusVal, breakVal, cycleVal, timeOverride = null){
     currentBreakVal = breakVal
     currentCycleVal = cycleVal
@@ -278,7 +318,17 @@ function handleStartSession(){
     const cycleVal = cycleInput.value
     timerPopup.style.display = 'flex'
     focusPopup.style.display = 'none'
-    countDownTimer(focusVal, breakVal, cycleVal)
+    //countDownTimer(focusVal, breakVal, cycleVal)
+
+    chrome.runtime.sendMessage({
+        action : 'startTimer',
+        focusVal: focusVal,
+        breakVal: breakVal,
+        cycleVal: cycleVal,
+        focusBool: true
+    }, () => {
+        startDisplayUpdate()
+    })
     
 }
 
@@ -289,13 +339,15 @@ function handlePauseResume(e){
     if(action == "Pause"){
         pauseBtn.style.display = 'none'
         resumeBtn.style.display = 'block'
-        clearInterval(timerLoop)
+        chrome.runtime.sendMessage({action: 'pauseTimer'})
+        //clearInterval(timerLoop)
     
     }
     else{
         pauseBtn.style.display = 'block'
         resumeBtn.style.display = 'none'
-        countDownTimer(currentFocusVal, currentBreakVal, currentCycleVal, remainingTimeGlobal)
+        chrome.runtime.sendMessage({action: 'resumeTimer'})
+       // countDownTimer(currentFocusVal, currentBreakVal, currentCycleVal, remainingTimeGlobal)
 
     }
    
@@ -316,7 +368,7 @@ function handleReset(){
     }
 
     semicircles.forEach(s =>{
-        s.styled.display = 'none'
+        s.style.display = 'none'
         s.style.transform = 'rotate(0deg)'
     })
 }
