@@ -26,7 +26,7 @@ const clock = document.querySelector('.clock')
 
 
 
-
+let paused = false
 let focusBool = true
 let currentFocusVal = 0
 let currentBreakVal = 0
@@ -42,8 +42,36 @@ function startDisplayUpdate(){
     }
     timerLoop = setInterval(() =>{
         chrome.runtime.sendMessage({action: 'getTimerState'}, (response) =>{
-            const state = response.timerState
-            console.log(state.currentFocusVal)
+            if(response && response.isRunning && response.state){
+                const state = response.timerState
+
+                currentBreakVal = state.breakVal
+                currentCycleVal = state.cycleVal
+                currentFocusVal = state.focusVal
+                focusBool = state.focusBool
+                paused = state.paused
+                remainingTimeGlobal = state.remainingTime
+    
+                displayTimer(remainingTimeGlobal, state.currentSetTime)
+
+                if(paused){
+                    pauseBtn.style.display = 'none'
+                    resumeBtn.style.display = 'block'
+                    
+                }
+    
+                else{
+                    resumeBtn.style.display = 'none'
+                    pauseBtn.style.display = 'block'
+                }
+    
+            }
+            else{
+                clearInterval(timerLoop)    
+                timerLoop = null
+            }
+           
+
         })
     },1000)
 }

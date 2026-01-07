@@ -94,15 +94,20 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 }) 
 
 function startTimer(focusVal, breakVal, cycleVal, focusBool, timeOverride){
-  timerState.currentFocusVal = focusVal
+
+
 }
 
 function pauseTimer(){
-  console.log('pause')
+  timerState.paused = true
+  timerState.isRunning = false
+  saveTimerState()
 }
 
 function resumeTimer(){
-
+  timerState.paused = false
+  startTimer(timerState.focusVal, timerState.breakVal, timerState.cycleVal, timerState.focusBool, timerState.pausedRemainingTime)
+  
 }
 
 function saveTimerState(){
