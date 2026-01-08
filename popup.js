@@ -36,23 +36,31 @@ let blockedBack = []
 let remainingTimeGlobal = 0
 let currentSetTime = 0
 
+
 function startDisplayUpdate(){
     if(timerLoop){
         clearInterval(timerLoop)
     }
     timerLoop = setInterval(() =>{
         chrome.runtime.sendMessage({action: 'getTimerState'}, (response) =>{
-            if(response && response.isRunning && response.state){
+           
+            if(response && response.timerState){
+               
                 const state = response.timerState
 
-                currentBreakVal = state.breakVal
-                currentCycleVal = state.cycleVal
-                currentFocusVal = state.focusVal
+                currentBreakVal = state.currentBreakVal
+                currentCycleVal = state.currentCycleVal
+                currentFocusVal = state.currentFocusVal
                 focusBool = state.focusBool
                 paused = state.paused
                 remainingTimeGlobal = state.remainingTime
-    
-                displayTimer(remainingTimeGlobal, state.currentSetTime)
+                currentSetTime = state.currentSetTime
+               
+
+
+                displayTimer(remainingTimeGlobal, currentSetTime)
+                
+                
 
                 if(paused){
                     pauseBtn.style.display = 'none'
@@ -67,13 +75,14 @@ function startDisplayUpdate(){
     
             }
             else{
-                clearInterval(timerLoop)    
+                clearInterval(timerLoop)
                 timerLoop = null
             }
            
+           
 
         })
-    },1000)
+    },50)
 }
 
 function displayTimer(remainingTime, setTime){
@@ -104,6 +113,7 @@ function displayTimer(remainingTime, setTime){
         `
 }
 
+/*
 function countDownTimer(focusVal, breakVal, cycleVal, timeOverride = null){
     currentBreakVal = breakVal
     currentCycleVal = cycleVal
@@ -192,6 +202,7 @@ function countDownTimer(focusVal, breakVal, cycleVal, timeOverride = null){
     
 
 }
+*/
 
 
 
@@ -341,12 +352,14 @@ function handleBack2(){
 }
 
 function handleStartSession(){
-    const focusVal = focusInput.value
-    const breakVal = breakInput.value
-    const cycleVal = cycleInput.value
+    const focusVal = parseInt(focusInput.value)
+    const breakVal = parseInt(breakInput.value)
+    const cycleVal = parseInt(cycleInput.value)
     timerPopup.style.display = 'flex'
     focusPopup.style.display = 'none'
+    
     //countDownTimer(focusVal, breakVal, cycleVal)
+   
 
     chrome.runtime.sendMessage({
         action : 'startTimer',
@@ -365,18 +378,10 @@ function handlePauseResume(e){
     const button = e.target
     const action = button.textContent
     if(action == "Pause"){
-        pauseBtn.style.display = 'none'
-        resumeBtn.style.display = 'block'
         chrome.runtime.sendMessage({action: 'pauseTimer'})
-        //clearInterval(timerLoop)
-    
     }
     else{
-        pauseBtn.style.display = 'block'
-        resumeBtn.style.display = 'none'
         chrome.runtime.sendMessage({action: 'resumeTimer'})
-       // countDownTimer(currentFocusVal, currentBreakVal, currentCycleVal, remainingTimeGlobal)
-
     }
    
 }

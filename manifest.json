@@ -11,7 +11,9 @@
         "storage",
         "declarativeNetRequest",
         "declarativeNetRequestWithHostAccess",
-        "tabs"
+        "tabs",
+        "alarms",
+        "notifications"
     ],
 
     "host_permissions": ["<all_urls>"],
