@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blocked</title>
+    <link rel="stylesheet" href="popup.css">
+     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+</head>
+<body>
+    <div id="popup">
+        <h1 id="title">Block Website</h1>
+        <h2 id="current-website"></h2>
+        <div class="buttons">
+            <button id="block-btn">Block this site</button>
+            <button id="edit-btn">Edit block list</button>
+            <button id="focus">Focus Mode</button>
+           
+          
+        </div>
+    </div>
+
+    <div id="block-popup">
+        <h1>Website blocked</h1>
+        <button id="unblock-btn">Unblock</button>
+        <button id="refresh">Refresh</button>
+    </div>
+
+    <div id="edit-list-popup">
+        <i id="back-btn" class="fa-solid fa-arrow-left"></i>
+        <h1>Edit Block List</h2>
+        <ul id="block-list">
+    
+        </ul>
+    </div>
+    
+    <div id="focus-popup">
+        <i id="back-btn2" class="fa-solid fa-arrow-left"></i>
+        <h1>Focus Mode</h1>
+        <div id="focus-body">
+            
+            <div class="focus-item">
+                <h3>Focus Time</h3>
+                <div>
+                    <input id="focus-input" type="number" step="1" min="1" value="5">
+                    <p>Minutes</p>
+                </div>
+            </div>
+            <div class="focus-item">
+                <h3>Break Time</h3>
+                <div>
+                    <input id="break-input" type="number" step="1" min="1" max="60" value="10">
+                    <p>Minutes</p>
+                </div>
+            </div>
+
+            <div class="focus-item">
+                <h3>Num of Cycles</h3>
+                <div>
+                    <input id="cycles-input" type="number" step="1" min="1" max="5" value="1">
+                    <p>Cycles</p>
+                </div>
+            </div>
+               
+           
+            <button id="session-btn">Start Session</button>
+        </div>
+    </div>
+        
+    <div id="timer-popup">
+        <div class="timer-container">
+            <div class="semicircle"></div>
+            <div class="semicircle"></div>
+            <div class="semicircle"></div>
+            <div class="outermost-circle"></div>
+
+            <div class="clock-container">
+                <div class="clock"></div>
+            </div>
+        </div>
+
+    
+
+        <div class="timer-btns">
+            <button id="reset-btn">Reset</button>
+            <button id="pause-btn">Pause</button>
+            <button id="resume-btn">Resume</button>
+        </div>
+    </div>
+
+    <script src="popup.js" type="module"></script>
+</body>
+</html>

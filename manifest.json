@@ -1,0 +1,35 @@
+{
+    "name": "Blocked",
+    "version": "1.0",
+    "manifest_version": 3,
+    "description": "Extension to block websites",
+    "action": {
+        "default_icon": "icons/blocked.png",
+        "default_popup" : "popup.html"
+    },
+    "permissions": [
+        "storage",
+        "declarativeNetRequest",
+        "declarativeNetRequestWithHostAccess",
+        "tabs",
+        "alarms",
+        "notifications"
+    ],
+
+    "host_permissions": ["<all_urls>"],
+
+
+    "background": {
+        "service_worker": "background.js"
+        
+    },
+
+    "web_accessible_resources": [
+  {
+    "resources": ["blocked.html"],
+    "matches": ["<all_urls>"]
+  }
+]
+
+
+}
