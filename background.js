@@ -135,7 +135,7 @@ function startTimer(focusVal, breakVal, cycleVal, focusBool, timeOverride = null
     chrome.alarms.create(ALARM_NAME, { when: timerState.futureTime });
     
     // Also create periodic check alarm (every second)
-    chrome.alarms.create(CHECK_ALARM, { periodInMinutes: 1/60 }); // Every second
+   
    
 }
 
