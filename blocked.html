@@ -4,8 +4,157 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Blocked</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap');
+
+        *{
+            box-sizing: border-box;
+        }
+
+        html, body{
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: 'Nunito', sans-serif;
+            background: linear-gradient(135deg, #FFF8F0 0%, #FFEFE0 50%, #F7E5D3 100%);
+            color: #4A3F35;
+        }
+
+        body{
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 24px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .blob{
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(60px);
+            opacity: 0.45;
+            pointer-events: none;
+        }
+
+        .blob-1{
+            width: 360px;
+            height: 360px;
+            background-color: #FFB5A7;
+            top: -80px;
+            left: -80px;
+        }
+
+        .blob-2{
+            width: 420px;
+            height: 420px;
+            background-color: #C7CEEA;
+            bottom: -120px;
+            right: -100px;
+        }
+
+        .blob-3{
+            width: 280px;
+            height: 280px;
+            background-color: #B5EAD7;
+            top: 40%;
+            right: 15%;
+            opacity: 0.35;
+        }
+
+        .card{
+            position: relative;
+            z-index: 1;
+            background-color: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            border-radius: 28px;
+            padding: 56px 64px;
+            max-width: 460px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 24px 60px rgba(74, 63, 53, 0.12);
+        }
+
+        .badge{
+            width: 88px;
+            height: 88px;
+            margin: 0 auto 28px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #FFB5A7 0%, #C7CEEA 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 12px 28px rgba(255, 181, 167, 0.4);
+        }
+
+        .badge-inner{
+            width: 40px;
+            height: 40px;
+            position: relative;
+        }
+
+        .badge-inner::before,
+        .badge-inner::after{
+            content: '';
+            position: absolute;
+            top: 4px;
+            width: 10px;
+            height: 32px;
+            background-color: #FFFFFF;
+            border-radius: 4px;
+        }
+
+        .badge-inner::before{
+            left: 6px;
+        }
+
+        .badge-inner::after{
+            right: 6px;
+        }
+
+        h1{
+            font-size: 34px;
+            font-weight: 800;
+            margin: 0 0 10px;
+            color: #4A3F35;
+            letter-spacing: -0.02em;
+        }
+
+        .subtitle{
+            font-size: 17px;
+            font-weight: 500;
+            margin: 0 0 28px;
+            color: #8A7F75;
+            line-height: 1.5;
+        }
+
+        .quote{
+            font-size: 14px;
+            font-weight: 500;
+            color: #A89A8B;
+            font-style: italic;
+            padding-top: 24px;
+            border-top: 1px solid rgba(74, 63, 53, 0.1);
+            margin: 0;
+            line-height: 1.6;
+        }
+    </style>
 </head>
 <body>
-    <h1>Sorry this website is blocked</h1>
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+
+    <div class="card">
+        <div class="badge">
+            <div class="badge-inner"></div>
+        </div>
+        <h1>Stay Focused</h1>
+        <p class="subtitle">This site is on your block list.<br>Take a breath and come back later.</p>
+        <p class="quote">"Discipline is choosing between what you want now and what you want most."</p>
+    </div>
 </body>
 </html>

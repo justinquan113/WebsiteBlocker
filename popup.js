@@ -5,7 +5,6 @@ const editBlockList = document.getElementById('edit-btn')
 const blockPopup = document.getElementById('block-popup');
 const popup = document.getElementById('popup');
 const unblock = document.getElementById('unblock-btn');
-const refresh = document.getElementById('refresh');
 const editPopup = document.getElementById('edit-list-popup');
 const back = document.getElementById('back-btn')
 const back2 = document.getElementById('back-btn2')
@@ -23,6 +22,7 @@ const resetBtn = document.getElementById('reset-btn')
 const resumeBtn = document.getElementById('resume-btn')
 const semicircles = document.querySelectorAll('.semicircle')
 const clock = document.querySelector('.clock')
+const timerMode = document.getElementById('timer-mode')
 
 
 
@@ -35,6 +35,7 @@ let timerLoop = null
 let blockedBack = []
 let remainingTimeGlobal = 0
 let currentSetTime = 0
+let blockedOriginalUrl = null
 
 
 function startDisplayUpdate(){
@@ -45,8 +46,24 @@ function startDisplayUpdate(){
         chrome.runtime.sendMessage({action: 'getTimerState'}, (response) =>{
            
             if(response && response.timerState){
-               
+
                 const state = response.timerState
+
+                if (!state.isRunning){
+                    // All cycles done — return to home
+                    clearInterval(timerLoop)
+                    timerLoop = null
+                    timerPopup.style.display = 'none'
+                    focusPopup.style.display = 'none'
+                    popup.style.display = 'flex'
+                    pauseBtn.style.display = 'block'
+                    resumeBtn.style.display = 'none'
+                    semicircles.forEach(s => {
+                        s.style.display = 'none'
+                        s.style.transform = 'rotate(0deg)'
+                    })
+                    return
+                }
 
                 currentBreakVal = state.currentBreakVal
                 currentCycleVal = state.currentCycleVal
@@ -55,6 +72,8 @@ function startDisplayUpdate(){
                 paused = state.paused
                 remainingTimeGlobal = state.remainingTime
                 currentSetTime = state.currentSetTime
+
+                timerMode.textContent = focusBool ? 'Focus Time' : 'Break Time'
                
 
 
@@ -217,10 +236,30 @@ async function showDomain(){
     if (!tab || !tab.url){
         return
     }
+
+    const blockedPagePrefix = chrome.runtime.getURL("blocked.html")
+    if (tab.url.startsWith(blockedPagePrefix)){
+        const hashIndex = tab.url.indexOf('#')
+        if (hashIndex !== -1){
+            blockedOriginalUrl = tab.url.slice(hashIndex + 1)
+            try {
+                website_url = new URL(blockedOriginalUrl).hostname
+            } catch {
+                website_url = 'this site'
+            }
+        } else {
+            website_url = 'this site'
+        }
+        current.innerHTML = website_url
+        popup.style.display = 'none'
+        blockPopup.style.display = 'flex'
+        return
+    }
+
     const url = new URL(tab.url);
     website_url = url.hostname;
     current.innerHTML = website_url
-    
+
     chrome.storage.local.get(["blockedWebsites"]).then((result) =>{
         const list = result.blockedWebsites || []
         if (list.includes(website_url)){
@@ -228,34 +267,27 @@ async function showDomain(){
             blockPopup.style.display = 'flex'
         }
     })
-
-   
-    
 }
 
-async function refreshCurrentTab() {
-  let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (tab && tab.id) {
-    chrome.tabs.reload(tab.id);
-  }
-}
+async function handleBlock(){
+    const tab = await getCurrentTab()
+    if (!tab || !tab.url) return
 
+    blockedOriginalUrl = tab.url
 
-function handleBlock(){
     chrome.storage.local.get(["blockedWebsites"]).then((result) => {
         const list = result.blockedWebsites || []
         if (!list.includes(website_url)){
             list.push(website_url)
             chrome.storage.local.set({blockedWebsites: list})
         }
-       
-        
     })
 
     blockPopup.style.display = 'flex'
     popup.style.display = 'none'
 
-    
+    const blockedPageUrl = chrome.runtime.getURL("blocked.html") + "#" + tab.url
+    chrome.tabs.update(tab.id, {url: blockedPageUrl})
 }
 
 function handleEditBlockList(){
@@ -301,19 +333,11 @@ function handleEditBlockList(){
 }
 
 function handleUnblock(){
-    popup.style.display = 'flex'
-    blockPopup.style.display = 'none'
-    chrome.storage.local.get(["blockedWebsites"]).then((result) => {
-        const list = result.blockedWebsites
-        for (let i = 0; i < list.length; i++){
-            if(website_url == list[i]){
-                list.splice(i,1)
-            }
-        }
-        chrome.storage.local.set({blockedWebsites : list})
-
+    chrome.runtime.sendMessage({
+        action: 'unblockAndNavigate',
+        site: website_url,
+        url: blockedOriginalUrl
     })
-
 }
 
 function handleRemove(site,event){
@@ -387,8 +411,11 @@ function handlePauseResume(e){
 }
 
 function handleReset(){
+    chrome.runtime.sendMessage({action: 'stopTimer'})
+
     focusPopup.style.display = 'flex'
     timerPopup.style.display = 'none'
+    popup.style.display = 'none'
     pauseBtn.style.display = 'block'
     resumeBtn.style.display = 'none'
     currentBreakVal = 0
@@ -406,13 +433,24 @@ function handleReset(){
     })
 }
 
-document.addEventListener('DOMContentLoaded', showDomain);
+function restoreView(){
+    chrome.runtime.sendMessage({action: 'getTimerState'}, (response) => {
+        if (response && response.timerState && response.timerState.isRunning){
+            popup.style.display = 'none'
+            timerPopup.style.display = 'flex'
+            startDisplayUpdate()
+        } else {
+            showDomain()
+        }
+    })
+}
+
+document.addEventListener('DOMContentLoaded', restoreView);
 
 
 block.addEventListener('click', handleBlock)
 editBlockList.addEventListener('click', handleEditBlockList)
 unblock.addEventListener('click', handleUnblock)
-refresh.addEventListener('click', refreshCurrentTab)
 back.addEventListener('click', handleBack)
 focus.addEventListener('click', () =>{
     popup.style.display = 'none'

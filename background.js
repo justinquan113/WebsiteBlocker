@@ -7,37 +7,54 @@ chrome.runtime.onInstalled.addListener(() => {
   });
 });
 
-let blockedBack = []
-
 async function updateRules(){
 
     const { blockedWebsites = [] } = await chrome.storage.local.get("blockedWebsites");
 
-    
-    
-    const rules = blockedWebsites.map((site,index) => ({
-        id: index + 1, 
-        priority: 1,
-        action: {
-          type: "redirect",
-          redirect: {
-            extensionPath: "/blocked.html"
-          }
-        },
-        condition: {
-          urlFilter: `*${site}*`,
-          resourceTypes: ["main_frame"]
-        }
-      }));
+    const blockedPageUrl = chrome.runtime.getURL("blocked.html");
+
+    const rules = blockedWebsites.map((site, index) => {
+        const escapedSite = site.replace(/[.+?^${}()|[\]\\*]/g, '\\$&');
+        return {
+            id: index + 1,
+            priority: 1,
+            action: {
+                type: "redirect",
+                redirect: {
+                    regexSubstitution: `${blockedPageUrl}#\\0`
+                }
+            },
+            condition: {
+                regexFilter: `.*${escapedSite}.*`,
+                resourceTypes: ["main_frame"]
+            }
+        };
+    });
 
     const oldRules = await chrome.declarativeNetRequest.getDynamicRules()
     const oldRulesIds = oldRules.map(rule => rule.id)
-    chrome.declarativeNetRequest.updateDynamicRules({
+    await chrome.declarativeNetRequest.updateDynamicRules({
       addRules: rules,
       removeRuleIds: oldRulesIds
 
     });
-  
+
+}
+
+async function unblockAndNavigate(site, originalUrl){
+    const { blockedWebsites = [] } = await chrome.storage.local.get("blockedWebsites");
+    const updated = blockedWebsites.filter(s => s !== site);
+    await chrome.storage.local.set({blockedWebsites: updated});
+    await updateRules();
+
+    const [tab] = await chrome.tabs.query({active: true, currentWindow: true});
+    if (tab && tab.id){
+        if (originalUrl){
+            chrome.tabs.update(tab.id, {url: originalUrl});
+        } else {
+            chrome.tabs.reload(tab.id);
+        }
+    }
 }
 
 let timerState = {
@@ -93,6 +110,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     } else if (request.action === 'stopTimer') {
         stopTimer();
         sendResponse({ success: true });
+    } else if (request.action === 'unblockAndNavigate') {
+        unblockAndNavigate(request.site, request.url).then(() => {
+            sendResponse({ success: true });
+        });
+        return true;
     }
     return true;
 });
@@ -119,15 +141,21 @@ function startTimer(focusVal, breakVal, cycleVal, focusBool, timeOverride = null
     };
 
     if(focusBool){
-        chrome.storage.local.get(["blockedWebsites"]).then((result) =>{
-            blockedBack = [...result.blockedWebsites]
-            chrome.storage.local.set({blockedWebsites: blockedBack})
-            
+        // Restore the blocked list if break-mode previously cleared it
+        chrome.storage.local.get(["blockedBackup"]).then((result) => {
+            const backup = result.blockedBackup || []
+            if (backup.length > 0){
+                chrome.storage.local.set({blockedWebsites: backup, blockedBackup: []})
+            }
         })
     }
     else{
-        chrome.storage.local.set({blockedWebsites: []})
-    }   
+        // Back up the current list, then clear it for break
+        chrome.storage.local.get(["blockedWebsites"]).then((result) => {
+            const current = result.blockedWebsites || []
+            chrome.storage.local.set({blockedBackup: current, blockedWebsites: []})
+        })
+    }
 
     saveTimerState();
     
@@ -160,14 +188,23 @@ function resumeTimer() {
     );
 }
 
-/*
 function stopTimer() {
     timerState.isRunning = false;
+    timerState.paused = false;
+    timerState.futureTime = null;
+    timerState.pausedRemainingTime = 0;
     chrome.alarms.clear(ALARM_NAME);
     chrome.alarms.clear(CHECK_ALARM);
     saveTimerState();
+
+    // If we stopped mid-break, restore the blocked list
+    chrome.storage.local.get(["blockedBackup"]).then((result) => {
+        const backup = result.blockedBackup || []
+        if (backup.length > 0){
+            chrome.storage.local.set({blockedWebsites: backup, blockedBackup: []})
+        }
+    });
 }
-*/
 function checkTimer() {
     const now = Date.now();
     
@@ -187,13 +224,8 @@ function handleTimerComplete() {
   
     // Check if all cycles are complete
     if (timerState.currentCycleVal <= 0) {
-      
-        timerState.isRunning = false;
-        chrome.alarms.clear(ALARM_NAME);
-        chrome.alarms.clear(CHECK_ALARM);
-        saveTimerState();
-        
-        // Show notification
+        stopTimer();
+
         chrome.notifications.create({
             type: 'basic',
             iconUrl: 'icons/blocked.png',
