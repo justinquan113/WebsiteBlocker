@@ -9,7 +9,7 @@
 </head>
 <body>
     <div id="popup">
-        <h1 id="title">Block Website</h1>
+        <img id="current-favicon" alt="">
         <h2 id="current-website"></h2>
         <div class="buttons">
             <button id="block-btn">Block this site</button>
@@ -25,11 +25,19 @@
         <button id="unblock-btn">Unblock</button>
     </div>
 
+    <div id="unavailable-popup">
+        <h1>Not available on this page</h1>
+    </div>
+
     <div id="edit-list-popup">
         <i id="back-btn" class="fa-solid fa-arrow-left"></i>
         <h1>Edit Block List</h2>
+        <div id="search-wrap">
+            <input id="search-input" type="text" placeholder="Add a website..." autocomplete="off">
+            <ul id="search-suggestions"></ul>
+        </div>
         <ul id="block-list">
-    
+
         </ul>
     </div>
     

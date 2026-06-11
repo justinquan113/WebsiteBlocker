@@ -7,43 +7,95 @@ chrome.runtime.onInstalled.addListener(() => {
   });
 });
 
-async function updateRules(){
+const SITE_ALIASES = {
+    'twitter.com': ['x.com'],
+    'x.com': ['twitter.com']
+};
 
+function expandAliases(sites){
+    const out = new Set();
+    for (const s of sites){
+        out.add(s);
+        for (const alias of SITE_ALIASES[s] || []){
+            out.add(alias);
+        }
+    }
+    return [...out];
+}
+
+let updateRulesQueue = Promise.resolve();
+
+function updateRules(){
+    const next = updateRulesQueue.then(async () => {
+        const { blockedWebsites = [] } = await chrome.storage.local.get("blockedWebsites");
+        const blockedPageUrl = chrome.runtime.getURL("blocked.html");
+
+        const rules = expandAliases(blockedWebsites).map((site, index) => {
+            const escapedSite = site.replace(/[.+?^${}()|[\]\\*]/g, '\\$&');
+            return {
+                id: index + 1,
+                priority: 1,
+                action: {
+                    type: "redirect",
+                    redirect: {
+                        regexSubstitution: `${blockedPageUrl}#\\0`
+                    }
+                },
+                condition: {
+                    regexFilter: `.*${escapedSite}.*`,
+                    resourceTypes: ["main_frame"]
+                }
+            };
+        });
+
+        const oldRules = await chrome.declarativeNetRequest.getDynamicRules();
+        const oldRulesIds = oldRules.map(rule => rule.id);
+        await chrome.declarativeNetRequest.updateDynamicRules({
+            addRules: rules,
+            removeRuleIds: oldRulesIds
+        });
+    }).catch(e => console.error("updateRules error", e));
+
+    updateRulesQueue = next;
+    return next;
+}
+
+async function reblockActiveTabs(){
     const { blockedWebsites = [] } = await chrome.storage.local.get("blockedWebsites");
+    const allBlocked = expandAliases(blockedWebsites);
+    if (allBlocked.length === 0) return;
 
     const blockedPageUrl = chrome.runtime.getURL("blocked.html");
+    const tabs = await chrome.tabs.query({});
+    for (const tab of tabs){
+        if (!tab.url) continue;
+        if (!/^https?:\/\//.test(tab.url)) continue;
+        if (allBlocked.some(site => tab.url.includes(site))){
+            chrome.tabs.update(tab.id, {url: blockedPageUrl + "#" + tab.url});
+        }
+    }
+}
 
-    const rules = blockedWebsites.map((site, index) => {
-        const escapedSite = site.replace(/[.+?^${}()|[\]\\*]/g, '\\$&');
-        return {
-            id: index + 1,
-            priority: 1,
-            action: {
-                type: "redirect",
-                redirect: {
-                    regexSubstitution: `${blockedPageUrl}#\\0`
-                }
-            },
-            condition: {
-                regexFilter: `.*${escapedSite}.*`,
-                resourceTypes: ["main_frame"]
-            }
-        };
-    });
-
-    const oldRules = await chrome.declarativeNetRequest.getDynamicRules()
-    const oldRulesIds = oldRules.map(rule => rule.id)
-    await chrome.declarativeNetRequest.updateDynamicRules({
-      addRules: rules,
-      removeRuleIds: oldRulesIds
-
-    });
-
+async function restoreBlockedTabs(){
+    const blockedPagePrefix = chrome.runtime.getURL("blocked.html");
+    const tabs = await chrome.tabs.query({});
+    for (const tab of tabs){
+        if (!tab.url || !tab.url.startsWith(blockedPagePrefix)) continue;
+        const hashIndex = tab.url.indexOf('#');
+        if (hashIndex === -1) continue;
+        const originalUrl = tab.url.slice(hashIndex + 1);
+        if (originalUrl){
+            chrome.tabs.update(tab.id, {url: originalUrl});
+        }
+    }
 }
 
 async function unblockAndNavigate(site, originalUrl){
     const { blockedWebsites = [] } = await chrome.storage.local.get("blockedWebsites");
-    const updated = blockedWebsites.filter(s => s !== site);
+    const updated = blockedWebsites.filter(s => {
+        const variants = [s, ...(SITE_ALIASES[s] || [])];
+        return !variants.some(v => site.includes(v));
+    });
     await chrome.storage.local.set({blockedWebsites: updated});
     await updateRules();
 
@@ -125,7 +177,7 @@ function startTimer(focusVal, breakVal, cycleVal, focusBool, timeOverride = null
     }
 
     const time = focusBool ? focusVal : breakVal;
-    const timer = time * 1000;
+    const timer = time * 60 * 1000;
     const duration = timeOverride ?? timer;
     
     timerState = {
@@ -140,21 +192,27 @@ function startTimer(focusVal, breakVal, cycleVal, focusBool, timeOverride = null
         pausedRemainingTime: 0
     };
 
-    if(focusBool){
-        // Restore the blocked list if break-mode previously cleared it
-        chrome.storage.local.get(["blockedBackup"]).then((result) => {
-            const backup = result.blockedBackup || []
-            if (backup.length > 0){
-                chrome.storage.local.set({blockedWebsites: backup, blockedBackup: []})
-            }
-        })
-    }
-    else{
-        // Back up the current list, then clear it for break
-        chrome.storage.local.get(["blockedWebsites"]).then((result) => {
-            const current = result.blockedWebsites || []
-            chrome.storage.local.set({blockedBackup: current, blockedWebsites: []})
-        })
+    if (timeOverride === null){
+        if(focusBool){
+            // Restore the blocked list if break-mode previously cleared it
+            chrome.storage.local.get(["blockedBackup"]).then(async (result) => {
+                const backup = result.blockedBackup || []
+                if (backup.length > 0){
+                    await chrome.storage.local.set({blockedWebsites: backup, blockedBackup: []})
+                    await updateRules()
+                    reblockActiveTabs()
+                }
+            })
+        }
+        else{
+            // Back up the current list, then clear it for break
+            chrome.storage.local.get(["blockedWebsites"]).then(async (result) => {
+                const current = result.blockedWebsites || []
+                await chrome.storage.local.set({blockedBackup: current, blockedWebsites: []})
+                await updateRules()
+                restoreBlockedTabs()
+            })
+        }
     }
 
     saveTimerState();
@@ -188,7 +246,7 @@ function resumeTimer() {
     );
 }
 
-function stopTimer() {
+async function stopTimer() {
     timerState.isRunning = false;
     timerState.paused = false;
     timerState.futureTime = null;
@@ -197,13 +255,13 @@ function stopTimer() {
     chrome.alarms.clear(CHECK_ALARM);
     saveTimerState();
 
-    // If we stopped mid-break, restore the blocked list
-    chrome.storage.local.get(["blockedBackup"]).then((result) => {
-        const backup = result.blockedBackup || []
-        if (backup.length > 0){
-            chrome.storage.local.set({blockedWebsites: backup, blockedBackup: []})
-        }
-    });
+    // If we stopped mid-break or the session ended on a break, restore the list and re-block tabs
+    const { blockedBackup = [] } = await chrome.storage.local.get("blockedBackup");
+    if (blockedBackup.length > 0){
+        await chrome.storage.local.set({blockedWebsites: blockedBackup, blockedBackup: []});
+        await updateRules();
+        reblockActiveTabs();
+    }
 }
 function checkTimer() {
     const now = Date.now();
@@ -275,5 +333,9 @@ function saveTimerState() {
     chrome.storage.local.set({ timerState: timerState });
 }
 chrome.runtime.onInstalled.addListener(updateRules);
-chrome.storage.onChanged.addListener(updateRules);
+chrome.storage.onChanged.addListener((changes, area) => {
+    if (area === 'local' && changes.blockedWebsites){
+        updateRules();
+    }
+});
 
