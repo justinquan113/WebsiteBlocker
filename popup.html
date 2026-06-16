@@ -11,12 +11,20 @@
     <div id="popup">
         <img id="current-favicon" alt="">
         <h2 id="current-website"></h2>
-        <div class="buttons">
-            <button id="block-btn">Block this site</button>
-            <button id="edit-btn">Edit block list</button>
-            <button id="focus">Focus Mode</button>
-           
-          
+        <button id="block-btn">Block this site</button>
+        <div class="action-row">
+            <button id="edit-btn" class="icon-action" title="Edit block list">
+                <i class="fa-solid fa-list-check"></i>
+                <span>List</span>
+            </button>
+            <button id="focus" class="icon-action" title="Focus mode">
+                <i class="fa-solid fa-stopwatch"></i>
+                <span>Focus</span>
+            </button>
+            <button id="schedule-btn" class="icon-action" title="Schedule">
+                <i class="fa-solid fa-calendar-days"></i>
+                <span>Schedule</span>
+            </button>
         </div>
     </div>
 
@@ -30,8 +38,12 @@
     </div>
 
     <div id="edit-list-popup">
-        <i id="back-btn" class="fa-solid fa-arrow-left"></i>
-        <h1>Edit Block List</h2>
+        <header class="popup-header">
+            <button id="back-btn" class="back-btn" aria-label="Back" type="button">
+                <i class="fa-solid fa-arrow-left"></i>
+            </button>
+            <h1>Edit Block List</h1>
+        </header>
         <div id="search-wrap">
             <input id="search-input" type="text" placeholder="Add a website..." autocomplete="off">
             <ul id="search-suggestions"></ul>
@@ -42,8 +54,12 @@
     </div>
     
     <div id="focus-popup">
-        <i id="back-btn2" class="fa-solid fa-arrow-left"></i>
-        <h1>Focus Mode</h1>
+        <header class="popup-header">
+            <button id="back-btn2" class="back-btn" aria-label="Back" type="button">
+                <i class="fa-solid fa-arrow-left"></i>
+            </button>
+            <h1>Focus Mode</h1>
+        </header>
         <div id="focus-body">
             
             <div class="focus-item">
@@ -74,6 +90,43 @@
         </div>
     </div>
         
+    <div id="schedule-popup">
+        <header class="popup-header">
+            <button id="back-btn3" class="back-btn" aria-label="Back" type="button">
+                <i class="fa-solid fa-arrow-left"></i>
+            </button>
+            <h1>Schedule</h1>
+        </header>
+        <div id="schedule-body">
+            <label class="schedule-toggle">
+                <input id="schedule-enabled" type="checkbox">
+                <span>Enable schedule</span>
+            </label>
+            <p class="schedule-hint">Sites marked "Scheduled" are blocked only during these hours. "Always" sites stay blocked.</p>
+            <div id="schedule-days">
+                <button type="button" class="day-pill" data-day="0">S</button>
+                <button type="button" class="day-pill" data-day="1">M</button>
+                <button type="button" class="day-pill" data-day="2">T</button>
+                <button type="button" class="day-pill" data-day="3">W</button>
+                <button type="button" class="day-pill" data-day="4">T</button>
+                <button type="button" class="day-pill" data-day="5">F</button>
+                <button type="button" class="day-pill" data-day="6">S</button>
+            </div>
+            <div class="schedule-times">
+                <div class="time-field">
+                    <label for="schedule-start">Start</label>
+                    <input id="schedule-start" type="time" value="09:00">
+                </div>
+                <div class="time-field">
+                    <label for="schedule-end">End</label>
+                    <input id="schedule-end" type="time" value="17:00">
+                </div>
+            </div>
+            <button id="schedule-save">Save</button>
+            <p id="schedule-status"></p>
+        </div>
+    </div>
+
     <div id="timer-popup">
         <h2 id="timer-mode">Focus Time</h2>
         <div class="timer-container">

@@ -27,6 +27,15 @@ const resumeBtn = document.getElementById('resume-btn')
 const semicircles = document.querySelectorAll('.semicircle')
 const clock = document.querySelector('.clock')
 const timerMode = document.getElementById('timer-mode')
+const scheduleBtn = document.getElementById('schedule-btn')
+const schedulePopup = document.getElementById('schedule-popup')
+const scheduleEnabled = document.getElementById('schedule-enabled')
+const scheduleDays = document.getElementById('schedule-days')
+const scheduleStart = document.getElementById('schedule-start')
+const scheduleEnd = document.getElementById('schedule-end')
+const scheduleSave = document.getElementById('schedule-save')
+const scheduleStatus = document.getElementById('schedule-status')
+const back3 = document.getElementById('back-btn3')
 
 
 
@@ -90,6 +99,7 @@ function syncTimerState(startRender){
                 s.style.display = 'none'
                 s.style.transform = 'rotate(0deg)'
             })
+            showDomain()
             return
         }
 
@@ -278,6 +288,45 @@ function setFavicon(src){
     }
 }
 
+function timeToMinutes(t){
+    const [h, m] = t.split(':').map(Number)
+    return h * 60 + m
+}
+
+function isScheduleActiveNow(schedule, now = new Date()){
+    if (!schedule || !schedule.enabled) return false
+    if (!schedule.days || schedule.days.length === 0) return false
+    const startMins = timeToMinutes(schedule.startTime)
+    const endMins = timeToMinutes(schedule.endTime)
+    const mins = now.getHours() * 60 + now.getMinutes()
+    const today = now.getDay()
+    const yesterday = (today + 6) % 7
+    if (startMins < endMins){
+        return schedule.days.includes(today) && mins >= startMins && mins < endMins
+    }
+    if (startMins > endMins){
+        if (schedule.days.includes(today) && mins >= startMins) return true
+        if (schedule.days.includes(yesterday) && mins < endMins) return true
+        return false
+    }
+    return false
+}
+
+async function isSiteCurrentlyBlocked(site){
+    const result = await chrome.storage.local.get(["blockedWebsites", "scheduledWebsites", "schedule", "timerState"])
+    const blocked = result.blockedWebsites || []
+    const scheduled = result.scheduledWebsites || []
+    const ts = result.timerState
+
+    if (ts && ts.isRunning){
+        if (!ts.focusBool) return false
+        return blocked.includes(site) || scheduled.includes(site)
+    }
+    if (blocked.includes(site)) return true
+    if (scheduled.includes(site) && isScheduleActiveNow(result.schedule)) return true
+    return false
+}
+
 async function showDomain(){
     let tab = await getCurrentTab();
     if (!tab || !tab.url){
@@ -287,41 +336,54 @@ async function showDomain(){
     const blockedPagePrefix = chrome.runtime.getURL("blocked.html")
     if (tab.url.startsWith(blockedPagePrefix)){
         const hashIndex = tab.url.indexOf('#')
+        let originalHost = 'this site'
         if (hashIndex !== -1){
             blockedOriginalUrl = tab.url.slice(hashIndex + 1)
             try {
-                website_url = new URL(blockedOriginalUrl).hostname
+                originalHost = new URL(blockedOriginalUrl).hostname
             } catch {
-                website_url = 'this site'
+                originalHost = 'this site'
             }
-        } else {
-            website_url = 'this site'
+        }
+        website_url = originalHost
+        const stillBlocked = originalHost !== 'this site' && await isSiteCurrentlyBlocked(originalHost)
+        if (stillBlocked){
+            current.innerHTML = website_url
+            setFavicon(null)
+            popup.style.display = 'none'
+            blockPopup.style.display = 'flex'
+            return
+        }
+        if (blockedOriginalUrl){
+            chrome.tabs.update(tab.id, {url: blockedOriginalUrl})
         }
         current.innerHTML = website_url
         setFavicon(null)
-        popup.style.display = 'none'
-        blockPopup.style.display = 'flex'
         return
     }
 
     if (!/^https?:\/\//.test(tab.url)){
-        popup.style.display = 'none'
-        unavailablePopup.style.display = 'flex'
+        website_url = ''
+        current.innerHTML = 'Not available on this page'
+        current.classList.add('muted-title')
+        setFavicon(null)
+        block.style.display = 'none'
+        popup.style.display = 'flex'
         return
     }
+
+    block.style.display = ''
+    current.classList.remove('muted-title')
 
     const url = new URL(tab.url);
     website_url = url.hostname;
     current.innerHTML = website_url
     setFavicon(tab.favIconUrl)
 
-    chrome.storage.local.get(["blockedWebsites"]).then((result) =>{
-        const list = result.blockedWebsites || []
-        if (list.includes(website_url)){
-            popup.style.display = 'none'
-            blockPopup.style.display = 'flex'
-        }
-    })
+    if (await isSiteCurrentlyBlocked(website_url)){
+        popup.style.display = 'none'
+        blockPopup.style.display = 'flex'
+    }
 }
 
 async function handleBlock(){
@@ -330,11 +392,12 @@ async function handleBlock(){
 
     blockedOriginalUrl = tab.url
 
-    chrome.storage.local.get(["blockedWebsites"]).then((result) => {
-        const list = result.blockedWebsites || []
-        if (!list.includes(website_url)){
-            list.push(website_url)
-            chrome.storage.local.set({blockedWebsites: list})
+    chrome.storage.local.get(["blockedWebsites", "scheduledWebsites"]).then((result) => {
+        const blocked = result.blockedWebsites || []
+        const scheduled = result.scheduledWebsites || []
+        if (!blocked.includes(website_url) && !scheduled.includes(website_url)){
+            blocked.push(website_url)
+            chrome.storage.local.set({blockedWebsites: blocked})
         }
     })
 
@@ -361,13 +424,17 @@ const POPULAR_SITES = [
     'espn.com', 'pornhub.com'
 ]
 
-function renderBlockList(list){
+function renderBlockList(blocked, scheduled){
     blockList.innerHTML = ""
     const existingEmpty = editPopup.querySelector("h2")
     if (existingEmpty) existingEmpty.remove()
 
-    for (let i = 0; i < list.length; i++){
-        const site = list[i]
+    const entries = [
+        ...blocked.map(site => ({site, mode: 'always'})),
+        ...scheduled.map(site => ({site, mode: 'scheduled'}))
+    ]
+
+    for (const {site, mode} of entries){
         const li = document.createElement('li')
         li.className = "list-item"
 
@@ -388,26 +455,53 @@ function renderBlockList(list){
         label.appendChild(siteIcon)
         label.appendChild(name)
 
+        const badge = document.createElement('button')
+        badge.type = 'button'
+        badge.className = `mode-badge mode-${mode}`
+        badge.textContent = mode === 'always' ? 'Always' : 'Scheduled'
+        badge.title = 'Click to toggle'
+        badge.addEventListener('click', () => toggleSiteMode(site, mode))
+
         const icon = document.createElement("i")
         icon.className = "fa-regular fa-trash-can delete-btn"
-        icon.addEventListener("click", (event) => handleRemove(site, event))
+        icon.addEventListener("click", (event) => handleRemove(site, mode, event))
+
+        const actions = document.createElement('div')
+        actions.className = 'item-actions'
+        actions.appendChild(badge)
+        actions.appendChild(icon)
 
         div.appendChild(label)
-        div.appendChild(icon)
+        div.appendChild(actions)
         li.appendChild(div)
         blockList.appendChild(li)
     }
 
-    if (list.length === 0){
+    if (entries.length === 0){
         const h2 = document.createElement("h2")
         h2.textContent = "No Websites blocked"
         editPopup.appendChild(h2)
     }
 }
 
+function toggleSiteMode(site, currentMode){
+    chrome.storage.local.get(["blockedWebsites", "scheduledWebsites"]).then((result) => {
+        const blocked = (result.blockedWebsites || []).filter(s => s !== site)
+        const scheduled = (result.scheduledWebsites || []).filter(s => s !== site)
+        if (currentMode === 'always'){
+            scheduled.push(site)
+        } else {
+            blocked.push(site)
+        }
+        chrome.storage.local.set({blockedWebsites: blocked, scheduledWebsites: scheduled}).then(() => {
+            renderBlockList(blocked, scheduled)
+        })
+    })
+}
+
 function handleEditBlockList(){
-    chrome.storage.local.get(["blockedWebsites"]).then((result) => {
-        renderBlockList(result.blockedWebsites || [])
+    chrome.storage.local.get(["blockedWebsites", "scheduledWebsites"]).then((result) => {
+        renderBlockList(result.blockedWebsites || [], result.scheduledWebsites || [])
     })
 
     searchInput.value = ''
@@ -426,13 +520,16 @@ function addSiteToBlockList(rawInput){
     const site = normalizeDomain(rawInput)
     if (!site) return
 
-    chrome.storage.local.get(["blockedWebsites"]).then((result) => {
-        const list = result.blockedWebsites || []
-        if (!list.includes(site)){
-            list.push(site)
-            chrome.storage.local.set({blockedWebsites: list}).then(() => {
-                renderBlockList(list)
+    chrome.storage.local.get(["blockedWebsites", "scheduledWebsites"]).then((result) => {
+        const blocked = result.blockedWebsites || []
+        const scheduled = result.scheduledWebsites || []
+        if (!blocked.includes(site) && !scheduled.includes(site)){
+            blocked.push(site)
+            chrome.storage.local.set({blockedWebsites: blocked}).then(() => {
+                renderBlockList(blocked, scheduled)
             })
+        } else {
+            renderBlockList(blocked, scheduled)
         }
     })
 
@@ -513,40 +610,102 @@ function handleUnblock(){
     })
 }
 
-function handleRemove(site,event){
-
-
+function handleRemove(site, mode, event){
     const li = event.target.closest(".list-item")
     li.remove()
 
-    chrome.storage.local.get(["blockedWebsites"]).then((result) =>{
-        let list = result.blockedWebsites
-        list = list.filter(item => item != site);
-        chrome.storage.local.set({blockedWebsites : list})
+    const key = mode === 'scheduled' ? 'scheduledWebsites' : 'blockedWebsites'
+    chrome.storage.local.get([key]).then((result) => {
+        const list = (result[key] || []).filter(item => item !== site)
+        chrome.storage.local.set({[key]: list})
     })
 
-     if (blockList.innerHTML == ""){
-            if(!editPopup.querySelector("h2")){
-                const h2 = document.createElement("h2")
-                h2.textContent = "No Websites blocked"
-                editPopup.appendChild(h2)
-            }
-          
+    if (blockList.innerHTML == ""){
+        if(!editPopup.querySelector("h2")){
+            const h2 = document.createElement("h2")
+            h2.textContent = "No Websites blocked"
+            editPopup.appendChild(h2)
         }
+    }
 }
 
 function handleBack(){
     popup.style.display = 'flex'
     editPopup.style.display = 'none'
-  
-   
+    showDomain()
 }
 function handleBack2(){
     popup.style.display = 'flex'
     focusPopup.style.display = 'none'
-  
-   
+    showDomain()
 }
+function handleBack3(){
+    popup.style.display = 'flex'
+    schedulePopup.style.display = 'none'
+    showDomain()
+}
+
+const DEFAULT_SCHEDULE = {
+    enabled: false,
+    days: [1, 2, 3, 4, 5],
+    startTime: '09:00',
+    endTime: '17:00'
+}
+
+function getSelectedDays(){
+    return Array.from(scheduleDays.querySelectorAll('.day-pill.active'))
+        .map(el => parseInt(el.dataset.day, 10))
+        .sort((a, b) => a - b)
+}
+
+function renderSchedule(schedule){
+    const s = {...DEFAULT_SCHEDULE, ...(schedule || {})}
+    scheduleEnabled.checked = !!s.enabled
+    scheduleStart.value = s.startTime
+    scheduleEnd.value = s.endTime
+    scheduleDays.querySelectorAll('.day-pill').forEach(pill => {
+        const day = parseInt(pill.dataset.day, 10)
+        pill.classList.toggle('active', s.days.includes(day))
+    })
+    scheduleStatus.textContent = ''
+}
+
+function openSchedule(){
+    chrome.storage.local.get(['schedule']).then(({schedule}) => {
+        renderSchedule(schedule)
+        popup.style.display = 'none'
+        schedulePopup.style.display = 'flex'
+    })
+}
+
+function handleScheduleSave(){
+    const schedule = {
+        enabled: scheduleEnabled.checked,
+        days: getSelectedDays(),
+        startTime: scheduleStart.value || '09:00',
+        endTime: scheduleEnd.value || '17:00'
+    }
+
+    if (schedule.enabled && schedule.days.length === 0){
+        scheduleStatus.textContent = 'Pick at least one day.'
+        return
+    }
+
+    if (schedule.enabled && schedule.startTime === schedule.endTime){
+        scheduleStatus.textContent = 'Start and end cannot match.'
+        return
+    }
+
+    chrome.storage.local.set({schedule}).then(() => {
+        scheduleStatus.textContent = 'Saved.'
+    })
+}
+
+scheduleDays.addEventListener('click', (e) => {
+    const pill = e.target.closest('.day-pill')
+    if (!pill) return
+    pill.classList.toggle('active')
+})
 
 function handleStartSession(){
     const focusVal = parseInt(focusInput.value)
@@ -620,14 +779,16 @@ function handleReset(){
 }
 
 function restoreView(){
-    chrome.runtime.sendMessage({action: 'getTimerState'}, (response) => {
-        if (response && response.timerState && response.timerState.isRunning){
-            popup.style.display = 'none'
-            timerPopup.style.display = 'flex'
-            startDisplayUpdate()
-        } else {
-            showDomain()
-        }
+    chrome.runtime.sendMessage({action: 'syncEnforcement'}, () => {
+        chrome.runtime.sendMessage({action: 'getTimerState'}, (response) => {
+            if (response && response.timerState && response.timerState.isRunning){
+                popup.style.display = 'none'
+                timerPopup.style.display = 'flex'
+                startDisplayUpdate()
+            } else {
+                showDomain()
+            }
+        })
     })
 }
 
@@ -644,6 +805,9 @@ focus.addEventListener('click', () =>{
 })
 
 back2.addEventListener('click', handleBack2)
+back3.addEventListener('click', handleBack3)
+scheduleBtn.addEventListener('click', openSchedule)
+scheduleSave.addEventListener('click', handleScheduleSave)
 startSession.addEventListener('click', handleStartSession)
 pauseBtn.addEventListener('click', handlePauseResume)
 resumeBtn.addEventListener('click', handlePauseResume)
