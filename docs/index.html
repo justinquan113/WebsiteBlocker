@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blocked — Privacy Policy</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+        :root{
+            --bg: #FFF8F0;
+            --text: #4A3F35;
+            --muted: #8A7F75;
+            --primary: #FFB5A7;
+            --surface: #FFEFE0;
+            --border: #F5E6D3;
+        }
+
+        *{ box-sizing: border-box; }
+
+        html, body{
+            margin: 0;
+            padding: 0;
+            font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.65;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .wrap{
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 80px 24px 120px;
+        }
+
+        .badge{
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 14px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 28px;
+        }
+
+        .badge-dot{
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--primary);
+        }
+
+        h1{
+            font-size: 44px;
+            font-weight: 800;
+            margin: 0 0 12px;
+            letter-spacing: -0.02em;
+        }
+
+        .lede{
+            font-size: 18px;
+            color: var(--muted);
+            margin: 0 0 48px;
+        }
+
+        h2{
+            font-size: 22px;
+            font-weight: 700;
+            margin: 40px 0 12px;
+            letter-spacing: -0.01em;
+        }
+
+        p{ margin: 0 0 16px; }
+
+        ul{
+            margin: 0 0 16px;
+            padding-left: 22px;
+        }
+
+        li{ margin-bottom: 6px; }
+
+        a{
+            color: var(--text);
+            text-decoration: underline;
+            text-decoration-color: var(--primary);
+            text-underline-offset: 3px;
+        }
+
+        footer{
+            margin-top: 80px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border);
+            font-size: 13px;
+            color: var(--muted);
+        }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <div class="badge">
+            <span class="badge-dot"></span>
+            <span>Privacy Policy</span>
+        </div>
+
+        <h1>Blocked</h1>
+        <p class="lede">A Chrome extension for blocking distracting websites. This page describes how Blocked handles your data.</p>
+
+        <h2>What we collect</h2>
+        <p>Nothing leaves your browser.</p>
+        <p>Blocked stores the following entirely on your local machine, using the browser's built-in <code>chrome.storage.local</code> API:</p>
+        <ul>
+            <li>The list of websites you've chosen to block (always and scheduled)</li>
+            <li>Your schedule settings (days, start time, end time)</li>
+            <li>Your focus timer state (focus length, break length, cycle count, paused state)</li>
+        </ul>
+
+        <h2>What we don't collect</h2>
+        <ul>
+            <li>No analytics or usage tracking</li>
+            <li>No user accounts</li>
+            <li>No telemetry</li>
+            <li>No browsing history</li>
+            <li>No data sent to any server, ever</li>
+        </ul>
+
+        <h2>Third-party resources</h2>
+        <p>The extension fetches a few static resources from third-party CDNs to render its UI:</p>
+        <ul>
+            <li><strong>Google Fonts</strong> for typography (Plus Jakarta Sans, Nunito)</li>
+            <li><strong>Font Awesome</strong> for icons</li>
+            <li><strong>Google favicon service</strong> to display the favicon next to each site in your block list and on the blocked page</li>
+        </ul>
+        <p>These services may log standard request data (IP address, user-agent) according to their own privacy policies. We do not control what they log, and we never send identifying information to them beyond what's required to fetch the resource.</p>
+
+        <h2>Permissions</h2>
+        <p>The extension requests these Chrome permissions, used only for the purposes described:</p>
+        <ul>
+            <li><strong>storage</strong> — save your block list and settings locally</li>
+            <li><strong>declarativeNetRequest</strong> — perform the actual site blocking at the network layer</li>
+            <li><strong>tabs</strong> — read the current tab's URL so the popup can show the site you're on</li>
+            <li><strong>alarms</strong> — drive the focus timer and check for schedule changes</li>
+            <li><strong>notifications</strong> — alert you when a focus or break period ends</li>
+            <li><strong>host_permissions &lt;all_urls&gt;</strong> — required so block rules can match any site you add</li>
+        </ul>
+
+        <h2>Removing your data</h2>
+        <p>Uninstalling the extension removes every byte of data it stored. There is nothing to delete from any external service because nothing was ever sent there.</p>
+
+        <h2>Changes</h2>
+        <p>If this policy changes, the updated version will be posted here. The extension's version number in the Chrome Web Store will be incremented when material changes are made.</p>
+
+        <h2>Contact</h2>
+        <p>Questions or concerns? Open an issue on the <a href="https://github.com/justinquan113/WebsiteBlocker">project's GitHub repository</a>.</p>
+
+        <footer>
+            Last updated: June 18, 2026
+        </footer>
+    </div>
+</body>
+</html>
