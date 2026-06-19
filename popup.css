@@ -46,6 +46,26 @@ html, body{
 
 body{
     padding: 14px;
+    opacity: 0;
+    transition: opacity 0.18s ease-out;
+}
+
+body.ready{
+    opacity: 1;
+}
+
+@keyframes viewIn{
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+#popup,
+#block-popup,
+#edit-list-popup,
+#focus-popup,
+#schedule-popup,
+#timer-popup{
+    animation: viewIn 0.16s ease-out;
 }
 
 h1, h2, h3{
@@ -356,6 +376,93 @@ h1{
     font-size: 15px;
 }
 
+.empty-state{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 24px 16px 8px;
+    text-align: center;
+    color: var(--muted);
+}
+
+.empty-icon{
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 4px;
+}
+
+.empty-icon i{
+    font-size: 22px;
+    color: var(--primary);
+    opacity: 0.85;
+}
+
+.empty-state h3{
+    margin: 0;
+    font-size: 14px;
+    color: var(--text);
+    font-weight: 700;
+}
+
+.empty-state p{
+    margin: 0;
+    font-size: 11px;
+    line-height: 1.45;
+    max-width: 180px;
+}
+
+#snackbar{
+    display: none;
+    margin-top: 14px;
+    background-color: var(--text);
+    color: var(--bg);
+    border-radius: var(--radius);
+    padding: 8px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    box-shadow: 0 4px 12px rgba(74,63,53,0.18);
+    box-sizing: border-box;
+    width: 100%;
+}
+
+#snackbar.visible{
+    display: flex;
+    animation: viewIn 0.16s ease-out;
+}
+
+#snackbar .snackbar-text{
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    min-width: 0;
+}
+
+#snackbar button{
+    background: transparent;
+    color: var(--primary);
+    border: none;
+    font-family: var(--font);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    padding: 0 2px;
+}
+
+#snackbar button:hover{
+    text-decoration: underline;
+}
+
 .item-actions{
     display: flex;
     align-items: center;
@@ -569,12 +676,44 @@ input{
 
 #timer-mode{
     margin: 0;
-    color: var(--timer-text);
-    font-size: 18px;
+    color: var(--text);
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    padding: 6px 16px 6px 12px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#timer-mode::before{
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(255, 181, 167, 0.3);
+    animation: timerPulse 2s ease-in-out infinite;
+}
+
+@keyframes timerPulse{
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.55; transform: scale(0.85); }
+}
+
+#timer-popup.break-mode #timer-mode::before{
+    background-color: var(--secondary);
+    box-shadow: 0 0 0 3px rgba(181, 234, 215, 0.4);
 }
 
 .timer-container{
-    box-shadow: var(--shadow);
+    box-shadow:
+        0 18px 44px rgba(255, 181, 167, 0.32),
+        0 4px 14px rgba(74, 63, 53, 0.08);
     border-radius: 50%;
     width: 200px;
     height: 200px;
@@ -582,6 +721,13 @@ input{
     overflow: hidden;
     z-index: 1;
     background-color: var(--timer-track);
+    transition: box-shadow 0.4s ease-out;
+}
+
+#timer-popup.break-mode .timer-container{
+    box-shadow:
+        0 18px 44px rgba(181, 234, 215, 0.4),
+        0 4px 14px rgba(74, 63, 53, 0.08);
 }
 
 .semicircle{
@@ -591,6 +737,7 @@ input{
     top: 0;
     left: 0;
     transform-origin: right center;
+    transition: background-color 0.3s ease-out;
 }
 
 .semicircle:nth-child(1){
@@ -608,15 +755,21 @@ input{
     z-index: 4;
 }
 
+#timer-popup.break-mode .semicircle:nth-child(1),
+#timer-popup.break-mode .semicircle:nth-child(2){
+    background-color: var(--secondary);
+}
+
 .outermost-circle{
-    width: 190px;
-    height: 190px;
+    width: 184px;
+    height: 184px;
     background-color: var(--timer-inner);
     border-radius: 50%;
     z-index: 5;
     position: absolute;
-    top: 5px;
-    left: 5px;
+    top: 8px;
+    left: 8px;
+    box-shadow: inset 0 2px 10px rgba(74, 63, 53, 0.05);
 }
 
 .clock-container{
@@ -639,8 +792,8 @@ input{
 }
 
 .clock div{
-    font-size: 35px;
-    font-weight: 500;
+    font-size: 38px;
+    font-weight: 600;
     letter-spacing: -0.04em;
     font-variant-numeric: tabular-nums;
     color: var(--timer-text);
@@ -651,54 +804,77 @@ input{
 
 .clock .colon{
     background-color: transparent;
-    width: 10px;
+    width: 12px;
     margin-left: 0;
     margin-right: 0;
-    padding-bottom: 5px;
+    padding-bottom: 6px;
+    color: var(--muted);
 }
 
 .timer-btns{
     display: flex;
-    gap: 10px;
+    gap: 8px;
     width: 100%;
     box-sizing: border-box;
     padding: 0 12px;
 }
 
-#reset-btn{
-    border-radius: var(--radius);
+#reset-btn,
+#pause-btn,
+#resume-btn{
+    flex: 1;
+    border-radius: 999px;
     border: none;
-    width: 90%;
-    height: 30px;
-    background-color: var(--secondary);
-    color: var(--secondary-text);
+    height: 38px;
     font-family: var(--font);
+    font-weight: 700;
+    font-size: 12px;
     cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: background-color 0.15s, transform 0.1s, box-shadow 0.15s;
+}
+
+#reset-btn i,
+#pause-btn i,
+#resume-btn i{
+    font-size: 11px;
+}
+
+#reset-btn{
+    background-color: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
 }
 
 #reset-btn:hover{
-    background-color: var(--secondary-hover);
+    background-color: var(--border);
+    transform: translateY(-1px);
 }
 
 #pause-btn,
 #resume-btn{
-    border-radius: var(--radius);
-    border: none;
-    width: 90%;
-    height: 30px;
     background-color: var(--primary);
     color: var(--primary-text);
-    font-family: var(--font);
-    cursor: pointer;
-    box-shadow: var(--button-shadow);
-}
-
-#resume-btn{
-    display: none;
+    box-shadow: 0 4px 12px rgba(255, 181, 167, 0.5);
 }
 
 #pause-btn:hover,
 #resume-btn:hover{
     background-color: var(--primary-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(255, 181, 167, 0.6);
+}
+
+#reset-btn:active,
+#pause-btn:active,
+#resume-btn:active{
+    transform: translateY(0);
+}
+
+#resume-btn{
+    display: none;
 }
 

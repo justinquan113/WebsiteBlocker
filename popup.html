@@ -13,11 +13,11 @@
         <h2 id="current-website"></h2>
         <button id="block-btn">Block this site</button>
         <div class="action-row">
-            <button id="edit-btn" class="icon-action" title="Edit block list">
+            <button id="edit-btn" class="icon-action" title="Block list">
                 <i class="fa-solid fa-list-check"></i>
                 <span>List</span>
             </button>
-            <button id="focus" class="icon-action" title="Focus mode">
+            <button id="focus" class="icon-action" title="Focus Mode Timer">
                 <i class="fa-solid fa-stopwatch"></i>
                 <span>Focus</span>
             </button>
@@ -42,7 +42,7 @@
             <button id="back-btn" class="back-btn" aria-label="Back" type="button">
                 <i class="fa-solid fa-arrow-left"></i>
             </button>
-            <h1>Edit Block List</h1>
+            <h1>Block List</h1>
         </header>
         <div id="search-wrap">
             <input id="search-input" type="text" placeholder="Add a website..." autocomplete="off">
@@ -58,7 +58,7 @@
             <button id="back-btn2" class="back-btn" aria-label="Back" type="button">
                 <i class="fa-solid fa-arrow-left"></i>
             </button>
-            <h1>Focus Mode</h1>
+            <h1>Focus Mode Timer</h1>
         </header>
         <div id="focus-body">
             
@@ -143,12 +143,22 @@
     
 
         <div class="timer-btns">
-            <button id="reset-btn">Reset</button>
-            <button id="pause-btn">Pause</button>
-            <button id="resume-btn">Resume</button>
+            <button id="reset-btn" type="button" aria-label="Reset">
+                <i class="fa-solid fa-arrow-rotate-left"></i>
+                <span>Reset</span>
+            </button>
+            <button id="pause-btn" type="button" aria-label="Pause">
+                <i class="fa-solid fa-pause"></i>
+                <span>Pause</span>
+            </button>
+            <button id="resume-btn" type="button" aria-label="Resume">
+                <i class="fa-solid fa-play"></i>
+                <span>Resume</span>
+            </button>
         </div>
     </div>
 
+    <div id="snackbar" role="status" aria-live="polite"></div>
     <script src="popup.js" type="module"></script>
 </body>
 </html>

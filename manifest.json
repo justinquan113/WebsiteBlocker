@@ -1,11 +1,22 @@
 {
     "name": "Blocked",
-    "version": "1.0",
+    "version": "1.0.0",
     "manifest_version": 3,
-    "description": "Extension to block websites",
+    "description": "Stop wasting hours on distractions. Block sites with flexible rules, schedule deep work, and run focus sessions that stick.",
     "action": {
-        "default_icon": "icons/blocked.png",
+        "default_icon": {
+            "16": "icons/icon-16.png",
+            "32": "icons/icon-32.png",
+            "48": "icons/icon-48.png",
+            "128": "icons/icon-128.png"
+        },
         "default_popup" : "popup.html"
+    },
+    "icons": {
+        "16": "icons/icon-16.png",
+        "32": "icons/icon-32.png",
+        "48": "icons/icon-48.png",
+        "128": "icons/icon-128.png"
     },
     "permissions": [
         "storage",
@@ -20,8 +31,8 @@
 
 
     "background": {
-        "service_worker": "background.js"
-        
+        "service_worker": "background.js",
+        "type": "module"
     },
 
     "web_accessible_resources": [

@@ -1,0 +1,172 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap');
+
+*{
+    box-sizing: border-box;
+}
+
+html, body{
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    font-family: 'Nunito', sans-serif;
+    background: linear-gradient(135deg, #FFF8F0 0%, #FFEFE0 50%, #F7E5D3 100%);
+    color: #4A3F35;
+}
+
+body{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 24px;
+    overflow: hidden;
+    position: relative;
+}
+
+.blob{
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(60px);
+    opacity: 0.45;
+    pointer-events: none;
+}
+
+.blob-1{
+    width: 360px;
+    height: 360px;
+    background-color: #FFB5A7;
+    top: -80px;
+    left: -80px;
+}
+
+.blob-2{
+    width: 420px;
+    height: 420px;
+    background-color: #C7CEEA;
+    bottom: -120px;
+    right: -100px;
+}
+
+.blob-3{
+    width: 280px;
+    height: 280px;
+    background-color: #B5EAD7;
+    top: 40%;
+    right: 15%;
+    opacity: 0.35;
+}
+
+.card{
+    position: relative;
+    z-index: 1;
+    background-color: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    border-radius: 28px;
+    padding: 56px 64px;
+    max-width: 460px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 24px 60px rgba(74, 63, 53, 0.12);
+}
+
+.badge{
+    width: 96px;
+    height: 96px;
+    margin: 0 auto 24px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #FFB5A7 0%, #C7CEEA 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 12px 28px rgba(255, 181, 167, 0.4);
+    padding: 6px;
+}
+
+.badge-tile{
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background-color: #FFFFFF;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.site-favicon{
+    width: 56px;
+    height: 56px;
+    object-fit: contain;
+    display: none;
+}
+
+.badge-fallback{
+    width: 40px;
+    height: 40px;
+    position: relative;
+}
+
+.badge-fallback::before,
+.badge-fallback::after{
+    content: '';
+    position: absolute;
+    top: 4px;
+    width: 10px;
+    height: 32px;
+    background-color: #FFB5A7;
+    border-radius: 4px;
+}
+
+.badge-fallback::before{
+    left: 6px;
+}
+
+.badge-fallback::after{
+    right: 6px;
+}
+
+.badge-tile.has-favicon .badge-fallback{
+    display: none;
+}
+
+.badge-tile.has-favicon .site-favicon{
+    display: block;
+}
+
+h1.site-name{
+    font-size: 32px;
+    font-weight: 800;
+    margin: 0 0 10px;
+    color: #4A3F35;
+    letter-spacing: -0.02em;
+    word-break: break-all;
+}
+
+.reason{
+    font-size: 15px;
+    font-weight: 600;
+    margin: 0 0 6px;
+    color: #4A3F35;
+    line-height: 1.5;
+}
+
+.subtitle{
+    font-size: 14px;
+    font-weight: 500;
+    margin: 0 0 28px;
+    color: #8A7F75;
+    line-height: 1.5;
+}
+
+.quote{
+    font-size: 14px;
+    font-weight: 500;
+    color: #A89A8B;
+    font-style: italic;
+    padding-top: 24px;
+    border-top: 1px solid rgba(74, 63, 53, 0.1);
+    margin: 0;
+    line-height: 1.6;
+}

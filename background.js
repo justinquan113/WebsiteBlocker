@@ -1,3 +1,12 @@
+import {
+    SITE_ALIASES,
+    expandAliases,
+    isScheduleActive,
+    computeEnforcementState,
+    siteMatches,
+    urlMatchesSite,
+    buildHostRegexFilter
+} from './lib/schedule.js';
 
 chrome.runtime.onInstalled.addListener(() => {
   chrome.storage.local.get(["blockedWebsites"]).then(result => {
@@ -7,49 +16,7 @@ chrome.runtime.onInstalled.addListener(() => {
   });
 });
 
-const SITE_ALIASES = {
-    'twitter.com': ['x.com'],
-    'x.com': ['twitter.com']
-};
-
-function expandAliases(sites){
-    const out = new Set();
-    for (const s of sites){
-        out.add(s);
-        for (const alias of SITE_ALIASES[s] || []){
-            out.add(alias);
-        }
-    }
-    return [...out];
-}
-
 let updateRulesQueue = Promise.resolve();
-
-function timeToMinutes(t){
-    const [h, m] = t.split(':').map(Number);
-    return h * 60 + m;
-}
-
-function isScheduleActive(schedule, now = new Date()){
-    if (!schedule || !schedule.enabled) return false;
-    if (!schedule.days || schedule.days.length === 0) return false;
-
-    const startMins = timeToMinutes(schedule.startTime);
-    const endMins = timeToMinutes(schedule.endTime);
-    const mins = now.getHours() * 60 + now.getMinutes();
-    const today = now.getDay();
-    const yesterday = (today + 6) % 7;
-
-    if (startMins < endMins){
-        return schedule.days.includes(today) && mins >= startMins && mins < endMins;
-    }
-    if (startMins > endMins){
-        if (schedule.days.includes(today) && mins >= startMins) return true;
-        if (schedule.days.includes(yesterday) && mins < endMins) return true;
-        return false;
-    }
-    return false;
-}
 
 function activeTimerState(stored){
     if (timerState && timerState.isRunning) return timerState;
@@ -60,13 +27,7 @@ function activeTimerState(stored){
 async function getEnforcementState(){
     const stored = await chrome.storage.local.get(["timerState", "schedule"]);
     const ts = activeTimerState(stored);
-
-    if (ts){
-        // During a focus session, enforce everything. During a break, both lists are cleared in storage.
-        return { enforceAlways: ts.focusBool, enforceScheduled: ts.focusBool };
-    }
-    const scheduled = isScheduleActive(stored.schedule);
-    return { enforceAlways: true, enforceScheduled: scheduled };
+    return computeEnforcementState({ timerState: ts, schedule: stored.schedule });
 }
 
 function updateRules(){
@@ -80,23 +41,20 @@ function updateRules(){
             ...(enforceScheduled ? scheduledWebsites : [])
         ];
 
-        const rules = expandAliases(effectiveSites).map((site, index) => {
-            const escapedSite = site.replace(/[.+?^${}()|[\]\\*]/g, '\\$&');
-            return {
-                id: index + 1,
-                priority: 1,
-                action: {
-                    type: "redirect",
-                    redirect: {
-                        regexSubstitution: `${blockedPageUrl}#\\0`
-                    }
-                },
-                condition: {
-                    regexFilter: `.*${escapedSite}.*`,
-                    resourceTypes: ["main_frame"]
+        const rules = expandAliases(effectiveSites).map((site, index) => ({
+            id: index + 1,
+            priority: 1,
+            action: {
+                type: "redirect",
+                redirect: {
+                    regexSubstitution: `${blockedPageUrl}#\\0`
                 }
-            };
-        });
+            },
+            condition: {
+                regexFilter: buildHostRegexFilter(site),
+                resourceTypes: ["main_frame"]
+            }
+        }));
 
         const oldRules = await chrome.declarativeNetRequest.getDynamicRules();
         const oldRulesIds = oldRules.map(rule => rule.id);
@@ -113,19 +71,18 @@ function updateRules(){
 async function reblockActiveTabs(){
     const { blockedWebsites = [], scheduledWebsites = [] } = await chrome.storage.local.get(["blockedWebsites", "scheduledWebsites"]);
     const { enforceAlways, enforceScheduled } = await getEnforcementState();
-    const effective = [
+    const effective = expandAliases([
         ...(enforceAlways ? blockedWebsites : []),
         ...(enforceScheduled ? scheduledWebsites : [])
-    ];
-    const allBlocked = expandAliases(effective);
-    if (allBlocked.length === 0) return;
+    ]);
+    if (effective.length === 0) return;
 
     const blockedPageUrl = chrome.runtime.getURL("blocked.html");
     const tabs = await chrome.tabs.query({});
     for (const tab of tabs){
         if (!tab.url) continue;
         if (!/^https?:\/\//.test(tab.url)) continue;
-        if (allBlocked.some(site => tab.url.includes(site))){
+        if (effective.some(site => urlMatchesSite(tab.url, site))){
             chrome.tabs.update(tab.id, {url: blockedPageUrl + "#" + tab.url});
         }
     }
@@ -147,19 +104,15 @@ async function restoreBlockedTabs(){
         if (hashIndex === -1) continue;
         const originalUrl = tab.url.slice(hashIndex + 1);
         if (!originalUrl) continue;
-        if (stillBlocked.some(site => originalUrl.includes(site))) continue;
+        if (stillBlocked.some(site => urlMatchesSite(originalUrl, site))) continue;
         chrome.tabs.update(tab.id, {url: originalUrl});
     }
 }
 
 async function unblockAndNavigate(site, originalUrl){
     const stored = await chrome.storage.local.get(["blockedWebsites", "scheduledWebsites"]);
-    const matchesSite = (s) => {
-        const variants = [s, ...(SITE_ALIASES[s] || [])];
-        return variants.some(v => site.includes(v));
-    };
-    const blockedWebsites = (stored.blockedWebsites || []).filter(s => !matchesSite(s));
-    const scheduledWebsites = (stored.scheduledWebsites || []).filter(s => !matchesSite(s));
+    const blockedWebsites = (stored.blockedWebsites || []).filter(s => !siteMatches(s, site));
+    const scheduledWebsites = (stored.scheduledWebsites || []).filter(s => !siteMatches(s, site));
     await chrome.storage.local.set({blockedWebsites, scheduledWebsites});
     await updateRules();
 
@@ -405,7 +358,7 @@ function handleTimerComplete() {
 
         chrome.notifications.create({
             type: 'basic',
-            iconUrl: 'icons/blocked.png',
+            iconUrl: 'icons/icon-128.png',
             title: 'Pomodoro Complete!',
             message: 'All cycles finished!',
             priority: 2
@@ -423,7 +376,7 @@ function handleTimerComplete() {
     
     chrome.notifications.create({
         type: 'basic',
-        iconUrl: 'icons/blocked.png',
+        iconUrl: 'icons/icon-128.png',
         title: 'Pomodoro Timer',
         message: message,
         priority: 2
